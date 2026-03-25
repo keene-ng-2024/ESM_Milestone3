@@ -1,0 +1,88 @@
+services:
+
+  odoo:
+    image: odoo:17.0
+    depends_on:
+      - odoo-db
+    ports:
+      - "8069:8069"
+    volumes:
+      - odoo_data:/var/lib/odoo
+      - ./odoo/custom-addons:/mnt/extra-addons
+      - ./odoo/filestore:/var/lib/odoo/filestore
+    environment:
+      - HOST=odoo-db
+      - USER=odoo17
+      - PASSWORD=2140doo
+    restart: unless-stopped
+    networks:
+      - esmos_network
+
+  odoo-db:
+    image: postgres:15
+    environment:
+      - POSTGRES_DB=odoo
+      - POSTGRES_USER=odoo17
+      - POSTGRES_PASSWORD=2140doo
+    volumes:
+      - odoo_db_data:/var/lib/postgresql/data
+      - ./odoo_backup.sql:/docker-entrypoint-initdb.d/odoo_backup.sql
+    restart: unless-stopped
+    networks:
+      - esmos_network
+
+  moodle:
+    image: bitnami/moodle:latest
+    depends_on:
+      - moodle-db
+    ports:
+      - "8080:8080"
+    environment:
+      - MOODLE_DATABASE_HOST=moodle-db
+      - MOODLE_DATABASE_NAME=moodle
+      - MOODLE_DATABASE_USER=moodle
+      - MOODLE_DATABASE_PASSWORD=moodle2140
+      - MOODLE_USERNAME=admin
+      - MOODLE_PASSWORD=moodle2140
+    volumes:
+      - moodle_data:/bitnami/moodle
+    restart: unless-stopped
+    networks:
+      - esmos_network
+
+  moodle-db:
+    image: mariadb:10.6
+    environment:
+      - MYSQL_ROOT_PASSWORD=root2140
+      - MYSQL_DATABASE=moodle
+      - MYSQL_USER=moodle
+      - MYSQL_PASSWORD=moodle2140
+    volumes:
+      - moodle_db_data:/var/lib/mysql
+    restart: unless-stopped
+    networks:
+      - esmos_network
+
+  nginx:
+    image: nginx:stable
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d
+    depends_on:
+      - odoo
+      - moodle
+    restart: unless-stopped
+    networks:
+      - esmos_network
+
+volumes:
+  odoo_data:
+  odoo_db_data:
+  moodle_data:
+  moodle_db_data:
+
+networks:
+  esmos_network:
+    driver: bridge
