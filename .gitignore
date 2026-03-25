@@ -1,0 +1,13 @@
+# Ignore local data volumes
+data/
+odoo/filestore/
+odoo_backup.sql
+
+# Ignore SSL certs
+nginx/certs/
+
+# Ignore environment secrets
+.env
+
+# OS files
+.DS_Store
