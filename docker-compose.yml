@@ -45,7 +45,7 @@ services:
       - moodle_data:/var/www/html
       - moodle_appdata:/var/www/moodledata
     environment:
-      - MOODLE_DB_TYPE=mysqli
+      - MOODLE_DB_TYPE=mariadb
       - MOODLE_DB_HOST=moodle-db
       - MOODLE_DB_PORT=3306
       - MOODLE_DB_NAME=moodle
