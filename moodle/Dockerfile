@@ -20,8 +20,9 @@ RUN mkdir -p /var/www/moodledata \
 # Set Apache document root (required by moodlehq base image)
 ENV APACHE_DOCUMENT_ROOT=/var/www/html
 
-# Copy entrypoint
+# Copy entrypoint and setup script
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+COPY setup-course.php /usr/local/bin/setup-course.php
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
 EXPOSE 80

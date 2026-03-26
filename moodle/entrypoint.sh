@@ -80,6 +80,12 @@ if [ "$TABLE_COUNT" = "0" ]; then
         --shortname="${SITE_SHORTNAME}" \
         --agree-license
     echo "Moodle install complete."
+
+    # Run course setup script if it exists
+    if [ -f /usr/local/bin/setup-course.php ]; then
+        echo "Running ESMOS course setup..."
+        php /usr/local/bin/setup-course.php
+    fi
 else
     echo "Moodle database already installed (${TABLE_COUNT} tables found)."
 fi
