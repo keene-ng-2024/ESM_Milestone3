@@ -8,7 +8,7 @@ services:
       - "8069:8069"
     volumes:
       - odoo_data:/var/lib/odoo
-      - ./odoo/custom-addons:/mnt/extra-addons
+      - ./odoo/custom-addons/helpdesk:/mnt/extra-addons
       - ./odoo/filestore:/var/lib/odoo/filestore
     environment:
       - HOST=odoo-db
@@ -32,20 +32,31 @@ services:
       - esmos_network
 
   moodle:
-    image: bitnami/moodle:latest
+    build:
+      context: ./moodle
+      dockerfile: Dockerfile
+    container_name: esmos-moodle
     depends_on:
-      - moodle-db
+      moodle-db:
+        condition: service_healthy
     ports:
-      - "8080:8080"
-    environment:
-      - MOODLE_DATABASE_HOST=moodle-db
-      - MOODLE_DATABASE_NAME=moodle
-      - MOODLE_DATABASE_USER=moodle
-      - MOODLE_DATABASE_PASSWORD=moodle2140
-      - MOODLE_USERNAME=admin
-      - MOODLE_PASSWORD=moodle2140
+      - "8080:80"
     volumes:
-      - moodle_data:/bitnami/moodle
+      - moodle_data:/var/www/html
+      - moodle_appdata:/var/www/moodledata
+    environment:
+      - MOODLE_DB_TYPE=mysqli
+      - MOODLE_DB_HOST=moodle-db
+      - MOODLE_DB_PORT=3306
+      - MOODLE_DB_NAME=moodle
+      - MOODLE_DB_USER=moodle
+      - MOODLE_DB_PASS=moodle2140
+      - MOODLE_SITE_URL=http://localhost:8080
+      - MOODLE_SITE_FULLNAME=ESMOS Training
+      - MOODLE_SITE_SHORTNAME=ESMOS
+      - MOODLE_ADMIN_USER=admin
+      - MOODLE_ADMIN_PASS=moodle2140
+      - MOODLE_ADMIN_EMAIL=admin@esmos.internal
     restart: unless-stopped
     networks:
       - esmos_network
@@ -59,6 +70,11 @@ services:
       - MYSQL_PASSWORD=moodle2140
     volumes:
       - moodle_db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: unless-stopped
     networks:
       - esmos_network
@@ -81,6 +97,7 @@ volumes:
   odoo_data:
   odoo_db_data:
   moodle_data:
+  moodle_appdata:
   moodle_db_data:
 
 networks:
