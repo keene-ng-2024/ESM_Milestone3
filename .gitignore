@@ -1,13 +1,16 @@
-# Ignore local data volumes
+# Runtime data volumes (created by Docker)
 data/
-odoo/filestore/
-odoo_backup.sql
 
-# Ignore SSL certs
+# SSL certs (generate on the VM, never commit)
 nginx/certs/
 
-# Ignore environment secrets
+# Environment secrets
 .env
+
+# Python bytecache
+__pycache__/
+*.pyc
 
 # OS files
 .DS_Store
+Thumbs.db
