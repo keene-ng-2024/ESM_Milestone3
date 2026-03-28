@@ -39,8 +39,6 @@ services:
     depends_on:
       moodle-db:
         condition: service_healthy
-    ports:
-      - "8080:80"
     volumes:
       - moodle_data:/var/www/html
       - moodle_appdata:/var/www/moodledata
@@ -51,7 +49,7 @@ services:
       - MOODLE_DB_NAME=moodle
       - MOODLE_DB_USER=moodle
       - MOODLE_DB_PASS=moodle2140
-      - MOODLE_SITE_URL=http://localhost:8080
+      - MOODLE_SITE_URL=https://training.esmos.local
       - MOODLE_SITE_FULLNAME=ESMOS Training
       - MOODLE_SITE_SHORTNAME=ESMOS
       - MOODLE_ADMIN_USER=admin
@@ -86,6 +84,7 @@ services:
       - "443:443"
     volumes:
       - ./nginx/conf.d:/etc/nginx/conf.d
+      - ./nginx/certs:/etc/nginx/certs:ro
     depends_on:
       - odoo
       - moodle

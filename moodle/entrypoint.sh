@@ -54,6 +54,7 @@ global \$CFG;
 );
 
 \$CFG->wwwroot   = '${SITE_URL}';
+\$CFG->sslproxy  = true;
 \$CFG->dataroot  = '${MOODLEDATA_DIR}';
 \$CFG->admin     = 'admin';
 \$CFG->directorypermissions = 0777;

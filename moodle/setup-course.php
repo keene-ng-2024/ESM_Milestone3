@@ -6,7 +6,7 @@
  */
 
 define('CLI_SCRIPT', true);
-require(__DIR__ . '/config.php');
+require('/var/www/html/config.php');
 require_once($CFG->libdir . '/enrollib.php');
 require_once($CFG->libdir . '/completionlib.php');
 require_once($CFG->dirroot . '/course/lib.php');
