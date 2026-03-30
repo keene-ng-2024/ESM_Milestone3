@@ -4,8 +4,6 @@ services:
     image: odoo:17.0
     depends_on:
       - odoo-db
-    ports:
-      - "8069:8069"
     volumes:
       - odoo_data:/var/lib/odoo
       - ./odoo/custom-addons/helpdesk:/mnt/extra-addons
@@ -18,9 +16,18 @@ services:
     restart: unless-stopped
     networks:
       - esmos_network
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+        reservations:
+          cpus: "0.25"
+          memory: 512M
 
   odoo-db:
     image: postgres:15
+    command: postgres -c max_connections=200 -c shared_buffers=256MB
     environment:
       - POSTGRES_DB=odoo
       - POSTGRES_USER=odoo17
@@ -36,7 +43,6 @@ services:
     build:
       context: ./moodle
       dockerfile: Dockerfile
-    container_name: esmos-moodle
     depends_on:
       moodle-db:
         condition: service_healthy
@@ -59,6 +65,14 @@ services:
     restart: unless-stopped
     networks:
       - esmos_network
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+        reservations:
+          cpus: "0.25"
+          memory: 512M
 
   moodle-db:
     image: mariadb:10.6
