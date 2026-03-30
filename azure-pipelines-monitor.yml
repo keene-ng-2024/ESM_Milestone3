@@ -72,6 +72,129 @@ steps:
     displayName: 'Database connectivity check'
 
   - script: |
+      echo "=== Odoo Helpdesk Module ==="
+      TICKET_COUNT=$(docker exec -i esm_milestone3-odoo-db-1 psql -U odoo17 -d odoo -t -c \
+        "SELECT COUNT(*) FROM helpdesk_ticket;" 2>/dev/null | xargs)
+      if [ $? -ne 0 ] || [ -z "$TICKET_COUNT" ]; then
+        echo "##[error]Helpdesk module: table not accessible"
+        exit 1
+      fi
+      echo "Helpdesk tickets: $TICKET_COUNT"
+
+      OPEN_TICKETS=$(docker exec -i esm_milestone3-odoo-db-1 psql -U odoo17 -d odoo -t -c \
+        "SELECT COUNT(*) FROM helpdesk_ticket WHERE stage_id IN (SELECT id FROM helpdesk_ticket_stage WHERE closed = false);" 2>/dev/null | xargs)
+      echo "Open tickets: $OPEN_TICKETS"
+
+      echo ""
+      echo "=== Odoo Inventory Module ==="
+      PRODUCT_COUNT=$(docker exec -i esm_milestone3-odoo-db-1 psql -U odoo17 -d odoo -t -c \
+        "SELECT COUNT(*) FROM product_template;" 2>/dev/null | xargs)
+      if [ $? -ne 0 ] || [ -z "$PRODUCT_COUNT" ]; then
+        echo "##[error]Inventory module: table not accessible"
+        exit 1
+      fi
+      echo "Products: $PRODUCT_COUNT"
+
+      STOCK_MOVES=$(docker exec -i esm_milestone3-odoo-db-1 psql -U odoo17 -d odoo -t -c \
+        "SELECT COUNT(*) FROM stock_move WHERE state NOT IN ('done', 'cancel');" 2>/dev/null | xargs)
+      echo "Pending stock moves: $STOCK_MOVES"
+    displayName: 'Odoo module health check'
+
+  - script: |
+      echo "=== Moodle Course Status ==="
+      COURSE_COUNT=$(docker exec -i esm_milestone3-moodle-db-1 mysql -u moodle -pmoodle2140 moodle -sN -e \
+        "SELECT COUNT(*) FROM mdl_course WHERE id > 1;" 2>/dev/null)
+      if [ $? -ne 0 ] || [ -z "$COURSE_COUNT" ]; then
+        echo "##[error]Moodle courses: table not accessible"
+        exit 1
+      fi
+      echo "Courses: $COURSE_COUNT"
+
+      ENROLLED_USERS=$(docker exec -i esm_milestone3-moodle-db-1 mysql -u moodle -pmoodle2140 moodle -sN -e \
+        "SELECT COUNT(DISTINCT userid) FROM mdl_user_enrolments;" 2>/dev/null)
+      echo "Enrolled users: $ENROLLED_USERS"
+
+      COMPLETIONS=$(docker exec -i esm_milestone3-moodle-db-1 mysql -u moodle -pmoodle2140 moodle -sN -e \
+        "SELECT COUNT(*) FROM mdl_course_completions WHERE timecompleted IS NOT NULL;" 2>/dev/null)
+      echo "Course completions: $COMPLETIONS"
+
+      ACTIVE_USERS=$(docker exec -i esm_milestone3-moodle-db-1 mysql -u moodle -pmoodle2140 moodle -sN -e \
+        "SELECT COUNT(*) FROM mdl_user WHERE lastaccess > UNIX_TIMESTAMP(NOW() - INTERVAL 7 DAY) AND deleted = 0;" 2>/dev/null)
+      echo "Active users (last 7 days): $ACTIVE_USERS"
+    displayName: 'Moodle module health check'
+
+  - script: |
+      FAILED=0
+
+      echo "=== Odoo Helpdesk Integrity ==="
+      # Check helpdesk stages haven't been deleted or renamed
+      STAGE_NAMES=$(docker exec -i esm_milestone3-odoo-db-1 psql -U odoo17 -d odoo -t -c \
+        "SELECT string_agg(name, ',' ORDER BY sequence) FROM helpdesk_ticket_stage;" 2>/dev/null | xargs)
+      echo "Helpdesk stages: $STAGE_NAMES"
+      if [ -z "$STAGE_NAMES" ]; then
+        echo "##[error]Helpdesk stages are missing — possible tampering"
+        FAILED=1
+      fi
+
+      # Check no tickets were mass-deleted
+      TICKET_COUNT=$(docker exec -i esm_milestone3-odoo-db-1 psql -U odoo17 -d odoo -t -c \
+        "SELECT COUNT(*) FROM helpdesk_ticket;" 2>/dev/null | xargs)
+      echo "Total tickets: $TICKET_COUNT"
+
+      # Check helpdesk teams still exist
+      TEAM_COUNT=$(docker exec -i esm_milestone3-odoo-db-1 psql -U odoo17 -d odoo -t -c \
+        "SELECT COUNT(*) FROM helpdesk_ticket_team;" 2>/dev/null | xargs)
+      echo "Helpdesk teams: $TEAM_COUNT"
+      if [ "$TEAM_COUNT" -eq 0 ]; then
+        echo "##[error]All helpdesk teams deleted — possible tampering"
+        FAILED=1
+      fi
+
+      echo ""
+      echo "=== Odoo Product Integrity ==="
+      # Check products haven't been mass-deleted
+      PRODUCT_COUNT=$(docker exec -i esm_milestone3-odoo-db-1 psql -U odoo17 -d odoo -t -c \
+        "SELECT COUNT(*) FROM product_template WHERE active = true;" 2>/dev/null | xargs)
+      echo "Active products: $PRODUCT_COUNT"
+
+      # Check product categories still exist
+      CATEGORY_COUNT=$(docker exec -i esm_milestone3-odoo-db-1 psql -U odoo17 -d odoo -t -c \
+        "SELECT COUNT(*) FROM product_category;" 2>/dev/null | xargs)
+      echo "Product categories: $CATEGORY_COUNT"
+      if [ "$CATEGORY_COUNT" -eq 0 ]; then
+        echo "##[error]All product categories deleted — possible tampering"
+        FAILED=1
+      fi
+
+      echo ""
+      echo "=== Moodle Course Integrity ==="
+      # Check staff training course exists and hasn't been renamed
+      COURSE_NAME=$(docker exec -i esm_milestone3-moodle-db-1 mysql -u moodle -pmoodle2140 moodle -sN -e \
+        "SELECT shortname FROM mdl_course WHERE shortname = 'STAFFTRAIN01';" 2>/dev/null)
+      if [ "$COURSE_NAME" != "STAFFTRAIN01" ]; then
+        echo "##[error]Staff training course missing or renamed — possible tampering"
+        FAILED=1
+      else
+        echo "Staff training course: OK"
+      fi
+
+      # Check course activities haven't been deleted
+      ACTIVITY_COUNT=$(docker exec -i esm_milestone3-moodle-db-1 mysql -u moodle -pmoodle2140 moodle -sN -e \
+        "SELECT COUNT(*) FROM mdl_course_modules cm JOIN mdl_course c ON cm.course = c.id WHERE c.shortname = 'STAFFTRAIN01' AND cm.deletioninprogress = 0;" 2>/dev/null)
+      echo "Course activities: $ACTIVITY_COUNT"
+      if [ "$ACTIVITY_COUNT" -eq 0 ]; then
+        echo "##[error]All course activities deleted — possible tampering"
+        FAILED=1
+      fi
+
+      if [ "$FAILED" -ne 0 ]; then
+        echo "##[error]Integrity checks failed!"
+        exit 1
+      fi
+      echo "All integrity checks passed."
+    displayName: 'Data integrity and defacement check'
+
+  - script: |
       cd $(PROJECT_DIR)
       RUNNING=$(docker compose ps --status running -q | wc -l)
       EXPECTED=5
