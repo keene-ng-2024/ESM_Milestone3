@@ -1,5 +1,6 @@
 trigger:
   - main
+  - fix/sync-filestore-dump
 
 pool:
   name: Default
