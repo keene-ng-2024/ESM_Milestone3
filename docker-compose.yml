@@ -10,6 +10,7 @@ services:
       - odoo_data:/var/lib/odoo
       - ./odoo/custom-addons/helpdesk:/mnt/extra-addons
       - ./odoo/filestore:/var/lib/odoo/filestore
+    command: -- --proxy-mode
     environment:
       - HOST=odoo-db
       - USER=odoo17
@@ -49,7 +50,7 @@ services:
       - MOODLE_DB_NAME=moodle
       - MOODLE_DB_USER=moodle
       - MOODLE_DB_PASS=moodle2140
-      - MOODLE_SITE_URL=https://training.esmos.local
+      - MOODLE_SITE_URL=https://esmos-e08g09t05.koreacentral.cloudapp.azure.com:8443
       - MOODLE_SITE_FULLNAME=ESMOS Training
       - MOODLE_SITE_SHORTNAME=ESMOS
       - MOODLE_ADMIN_USER=admin
@@ -82,6 +83,7 @@ services:
     ports:
       - "80:80"
       - "443:443"
+      - "8443:8443"
     volumes:
       - ./nginx/conf.d:/etc/nginx/conf.d
       - ./nginx/certs:/etc/nginx/certs:ro
