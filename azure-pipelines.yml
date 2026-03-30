@@ -12,8 +12,9 @@ variables:
 steps:
   - script: |
       cd $(PROJECT_DIR)
-      git checkout $(Build.SourceBranchName)
-      git pull origin $(Build.SourceBranchName)
+      BRANCH=$(echo "$(Build.SourceBranch)" | sed 's|refs/heads/||')
+      git checkout "$BRANCH"
+      git pull origin "$BRANCH"
     displayName: 'Pull latest code'
 
   - script: |
