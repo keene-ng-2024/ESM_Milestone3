@@ -54,6 +54,24 @@ steps:
     displayName: 'Health check'
 
   - script: |
+      echo "=== PostgreSQL (Odoo DB) ==="
+      docker exec esm_milestone3-odoo-db-1 pg_isready -U odoo17 -d odoo
+      if [ $? -ne 0 ]; then
+        echo "##[error]PostgreSQL is not accepting connections"
+        exit 1
+      fi
+      echo "PostgreSQL: OK"
+
+      echo "=== MariaDB (Moodle DB) ==="
+      docker exec esm_milestone3-moodle-db-1 healthcheck.sh --connect --innodb_initialized
+      if [ $? -ne 0 ]; then
+        echo "##[error]MariaDB is not accepting connections"
+        exit 1
+      fi
+      echo "MariaDB: OK"
+    displayName: 'Database connectivity check'
+
+  - script: |
       cd $(PROJECT_DIR)
       RUNNING=$(docker compose ps --status running -q | wc -l)
       EXPECTED=5
