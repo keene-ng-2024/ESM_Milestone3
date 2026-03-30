@@ -1,0 +1,67 @@
+trigger: none
+
+schedules:
+  - cron: "*/30 * * * *"
+    displayName: "Every 30 minutes"
+    branches:
+      include:
+        - main
+        - fix/sync-filestore-dump
+    always: true
+
+pool:
+  name: Default
+
+variables:
+  PROJECT_DIR: ~/ESM_Milestone3
+  DOMAIN: esmos-e08g09t05.koreacentral.cloudapp.azure.com
+
+steps:
+  - script: |
+      cd $(PROJECT_DIR)
+      echo "=== Container Status ==="
+      docker compose ps --format "table {{.Name}}\t{{.Service}}\t{{.Status}}\t{{.Ports}}"
+    displayName: 'Container status'
+
+  - script: |
+      cd $(PROJECT_DIR)
+      echo "=== Container Resource Usage ==="
+      docker stats --no-stream --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}\t{{.NetIO}}"
+    displayName: 'Resource usage'
+
+  - script: |
+      cd $(PROJECT_DIR)
+      echo "=== Recent Logs (errors only) ==="
+      docker compose logs --tail=10 --since=30m 2>&1 | grep -i -E "error|critical|fatal|warning" || echo "No errors found."
+    displayName: 'Error log check'
+
+  - script: |
+      ODOO_STATUS=$(curl -k -o /dev/null -s -w "%{http_code}" https://localhost/health)
+      MOODLE_STATUS=$(curl -k -o /dev/null -s -w "%{http_code}" https://localhost:8443/health)
+
+      echo "Odoo health: HTTP $ODOO_STATUS"
+      echo "Moodle health: HTTP $MOODLE_STATUS"
+
+      if [ "$ODOO_STATUS" != "200" ]; then
+        echo "##[error]Odoo is not responding (HTTP $ODOO_STATUS)"
+        exit 1
+      fi
+      if [ "$MOODLE_STATUS" != "200" ] && [ "$MOODLE_STATUS" != "303" ]; then
+        echo "##[error]Moodle is not responding (HTTP $MOODLE_STATUS)"
+        exit 1
+      fi
+      echo "All services healthy."
+    displayName: 'Health check'
+
+  - script: |
+      cd $(PROJECT_DIR)
+      RUNNING=$(docker compose ps --status running -q | wc -l)
+      EXPECTED=5
+      if [ "$RUNNING" -lt "$EXPECTED" ]; then
+        echo "##[error]Only $RUNNING/$EXPECTED containers running!"
+        echo "=== Down containers ==="
+        docker compose ps --format "table {{.Name}}\t{{.Service}}\t{{.Status}}" | grep -v "running"
+        exit 1
+      fi
+      echo "All $RUNNING/$EXPECTED containers running."
+    displayName: 'Container count check'
