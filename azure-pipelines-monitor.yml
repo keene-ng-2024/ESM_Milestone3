@@ -129,7 +129,7 @@ steps:
       echo "=== Odoo Helpdesk Integrity ==="
       # Check helpdesk stages haven't been deleted or renamed
       STAGE_NAMES=$(docker exec -i esm_milestone3-odoo-db-1 psql -U odoo17 -d odoo -t -c \
-        "SELECT string_agg(name, ',' ORDER BY sequence) FROM helpdesk_ticket_stage;" 2>/dev/null | xargs)
+        "SELECT string_agg(name->>'en_US', ',' ORDER BY sequence) FROM helpdesk_ticket_stage;" 2>/dev/null | xargs)
       echo "Helpdesk stages: $STAGE_NAMES"
       if [ -z "$STAGE_NAMES" ]; then
         echo "##[error]Helpdesk stages are missing — possible tampering"
