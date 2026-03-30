@@ -12,7 +12,8 @@ variables:
 steps:
   - script: |
       cd $(PROJECT_DIR)
-      git pull origin main
+      git checkout $(Build.SourceBranchName)
+      git pull origin $(Build.SourceBranchName)
     displayName: 'Pull latest code'
 
   - script: |
