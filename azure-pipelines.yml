@@ -1,0 +1,88 @@
+trigger:
+  - main
+
+pool:
+  name: Default
+
+variables:
+  PROJECT_DIR: ~/ESM_Milestone3
+  DOMAIN: esmos-e08g09t05.koreacentral.cloudapp.azure.com
+
+steps:
+  - script: |
+      cd $(PROJECT_DIR)
+      git pull origin main
+    displayName: 'Pull latest code'
+
+  - script: |
+      cd $(PROJECT_DIR)
+      if [ ! -f nginx/certs/fullchain.pem ]; then
+        echo "No SSL certs found, generating self-signed..."
+        mkdir -p nginx/certs
+        openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+          -keyout nginx/certs/privkey.pem \
+          -out nginx/certs/fullchain.pem \
+          -subj "/CN=$(DOMAIN)/O=ESMOS/C=SG"
+      else
+        echo "SSL certs already exist, skipping."
+      fi
+    displayName: 'Ensure SSL certs exist'
+
+  - script: |
+      cd $(PROJECT_DIR)
+      docker compose down
+      docker compose up -d --build
+    displayName: 'Deploy containers'
+
+  - script: |
+      echo "Waiting for services to start..."
+      sleep 30
+      cd $(PROJECT_DIR)
+      docker compose ps
+      # Verify all containers are running
+      RUNNING=$(docker compose ps --format json | grep -c '"running"')
+      EXPECTED=5
+      if [ "$RUNNING" -lt "$EXPECTED" ]; then
+        echo "WARNING: Only $RUNNING/$EXPECTED containers running"
+        docker compose logs --tail=20
+        exit 1
+      fi
+      echo "All $RUNNING containers are running."
+    displayName: 'Health check'
+
+  - script: |
+      cd $(PROJECT_DIR)
+      # Fix filestore permissions
+      docker exec -u root esm_milestone3-odoo-1 chown -R odoo:odoo /var/lib/odoo/filestore || true
+      # Set web.base.url and freeze it
+      docker exec -i esm_milestone3-odoo-db-1 psql -U odoo17 odoo -c \
+        "UPDATE ir_config_parameter SET value = 'https://$(DOMAIN)' WHERE key = 'web.base.url';"
+      docker exec -i esm_milestone3-odoo-db-1 psql -U odoo17 odoo -c \
+        "INSERT INTO ir_config_parameter (key, value, create_uid, create_date, write_uid, write_date) \
+         VALUES ('web.base.url.freeze', 'True', 1, NOW(), 1, NOW()) \
+         ON CONFLICT (key) DO UPDATE SET value = 'True';"
+      # Clear asset cache so Odoo regenerates with correct URLs
+      docker exec -i esm_milestone3-odoo-db-1 psql -U odoo17 odoo -c \
+        "DELETE FROM ir_attachment WHERE res_model = 'ir.ui.view' AND name LIKE 'web.assets_%';"
+      docker compose restart odoo
+    displayName: 'Configure Odoo'
+
+  - script: |
+      cd $(PROJECT_DIR)
+      # Verify HTTPS is working
+      STATUS=$(curl -k -o /dev/null -s -w "%{http_code}" https://localhost/)
+      if [ "$STATUS" = "200" ] || [ "$STATUS" = "303" ]; then
+        echo "Odoo is responding (HTTP $STATUS)"
+      else
+        echo "Odoo returned unexpected status: $STATUS"
+        exit 1
+      fi
+      STATUS=$(curl -k -o /dev/null -s -w "%{http_code}" https://localhost:8443/)
+      if [ "$STATUS" = "200" ] || [ "$STATUS" = "303" ]; then
+        echo "Moodle is responding (HTTP $STATUS)"
+      else
+        echo "Moodle returned unexpected status: $STATUS"
+        exit 1
+      fi
+      echo "Deployment successful!"
+    displayName: 'Verify deployment'
