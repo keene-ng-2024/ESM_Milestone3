@@ -39,15 +39,8 @@ class OdooUser(HttpUser):
         )
 
     @task(3)
-    def helpdesk_list(self):
-        self.client.get(
-            "/odoo/helpdesk",
-            verify=False,
-            name="GET /odoo/helpdesk",
-        )
-
-    @task(2)
     def helpdesk_rpc(self):
+        """Fetch open helpdesk tickets — main backend workload."""
         payload = {
             "jsonrpc": "2.0",
             "method": "call",
@@ -68,17 +61,41 @@ class OdooUser(HttpUser):
             name="RPC helpdesk.ticket/search_read",
         )
 
-    @task(1)
-    def odoo_home(self):
+    @task(2)
+    def odoo_web(self):
+        """Load the Odoo SPA shell."""
         self.client.get(
-            "/odoo",
+            "/web",
             verify=False,
-            name="GET /odoo (home)",
+            name="GET /web",
+        )
+
+    @task(1)
+    def helpdesk_team_rpc(self):
+        """Fetch helpdesk teams — secondary backend workload."""
+        payload = {
+            "jsonrpc": "2.0",
+            "method": "call",
+            "params": {
+                "model": "helpdesk.ticket.team",
+                "method": "search_read",
+                "args": [[]],
+                "kwargs": {
+                    "fields": ["name", "member_ids"],
+                    "limit": 10,
+                },
+            },
+        }
+        self.client.post(
+            "/web/dataset/call_kw",
+            json=payload,
+            verify=False,
+            name="RPC helpdesk.ticket.team/search_read",
         )
 
     def on_stop(self):
-        self.client.get(
+        self.client.post(
             "/web/session/logout",
             verify=False,
-            name="GET /web/session/logout",
+            name="POST /web/session/logout",
         )
