@@ -15,6 +15,9 @@ stages:
         steps:
           - script: |
               cd $(PROJECT_DIR)
+              sudo chown -R $(whoami) odoo/filestore || true
+              git checkout -- . || true
+              git clean -fd odoo/filestore || true
               BRANCH=$(echo "$(Build.SourceBranch)" | sed 's|refs/heads/||')
               git checkout "$BRANCH"
               git pull origin "$BRANCH"
@@ -102,6 +105,9 @@ stages:
         steps:
           - script: |
               cd $(PROJECT_DIR)
+              sudo chown -R $(whoami) odoo/filestore || true
+              git checkout -- . || true
+              git clean -fd odoo/filestore || true
               BRANCH=$(echo "$(Build.SourceBranch)" | sed 's|refs/heads/||')
               git checkout "$BRANCH"
               git pull origin "$BRANCH"
