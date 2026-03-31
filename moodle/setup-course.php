@@ -247,29 +247,17 @@ add_page($course, 'Course Summary and Next Steps', 3,
 <li>Request your Odoo account — the link unlocks after you submit the acknowledgement</li>
 </ol>');
 
-$ack_cmid = add_assignment($course, 'Training Acknowledgement', 3,
-'<p>Please confirm that you have read and understood all training materials by typing: <em>"I have completed the ESMOS Odoo staff training."</em></p>');
-
-$request_cmid = add_page($course, 'Request Your Odoo Account', 3,
-'<h3>Request Your Odoo Account</h3>
-<p>You have completed the ESMOS Staff Training. Click the button below to submit your account request to the helpdesk team. They will create your Odoo account within one business day.</p>
+add_assignment($course, 'Training Acknowledgement', 3,
+'<p>Please confirm that you have read and understood all training materials by typing: <em>"I have completed the ESMOS Odoo staff training."</em></p>
 <div style="margin-top:20px; padding:16px; background:#f0f4ff; border-left:4px solid #0d6efd; border-radius:4px;">
-<p style="margin:0 0 12px 0;"><strong>Ready to get started?</strong></p>
+<p style="margin:0 0 10px 0;"><strong>Next Step: Request your Odoo account</strong></p>
+<p style="margin:0 0 12px 0;">Once you have submitted your acknowledgement above, click the button below to request your Odoo account. The helpdesk team will create it within one business day.</p>
 <a href="https://esmos-e08g09t05.koreacentral.cloudapp.azure.com/healthcare/request-access"
    target="_blank"
    style="display:inline-block; padding:10px 24px; background:#0d6efd; color:#fff; text-decoration:none; border-radius:4px; font-weight:bold;">
    Request My Odoo Account &rarr;
 </a>
 </div>');
-
-// Lock "Request Your Odoo Account" behind Training Acknowledgement completion
-$availability = json_encode([
-    'op'    => '&',
-    'c'     => [['type' => 'completion', 'cm' => (int)$ack_cmid, 'e' => 1]],
-    'showc' => [true],
-]);
-$DB->set_field('course_modules', 'availability', $availability, ['id' => (int)$request_cmid]);
-echo "   Locked 'Request Your Odoo Account' behind Training Acknowledgement completion\n";
 
 // ─── 4. Set course completion criteria ───────────────────────────
 echo "4. Setting course completion criteria...\n";
