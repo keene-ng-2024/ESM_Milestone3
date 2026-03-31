@@ -13,6 +13,11 @@ require_once($CFG->dirroot . '/course/lib.php');
 require_once($CFG->dirroot . '/course/modlib.php');
 global $DB, $USER;
 
+// Build Odoo URL from the same host as Moodle (Odoo runs on port 443, no port suffix)
+$_p = parse_url($CFG->wwwroot);
+$ODOO_REQUEST_URL = $_p['scheme'] . '://' . $_p['host'] . '/healthcare/request-access';
+unset($_p);
+
 // Run as admin
 $USER = get_admin();
 \core\session\manager::set_user($USER);
@@ -252,7 +257,7 @@ add_assignment($course, 'Training Acknowledgement', 3,
 <div style="margin-top:20px; padding:16px; background:#f0f4ff; border-left:4px solid #0d6efd; border-radius:4px;">
 <p style="margin:0 0 10px 0;"><strong>Next Step: Request your Odoo account</strong></p>
 <p style="margin:0 0 12px 0;">Once you have submitted your acknowledgement above, click the button below to request your Odoo account. The helpdesk team will create it within one business day.</p>
-<a href="https://esmos-e08g09t05.koreacentral.cloudapp.azure.com/healthcare/request-access"
+<a href="' . $ODOO_REQUEST_URL . '"
    target="_blank"
    style="display:inline-block; padding:10px 24px; background:#0d6efd; color:#fff; text-decoration:none; border-radius:4px; font-weight:bold;">
    Request My Odoo Account &rarr;
