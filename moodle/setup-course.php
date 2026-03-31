@@ -13,10 +13,8 @@ require_once($CFG->dirroot . '/course/lib.php');
 require_once($CFG->dirroot . '/course/modlib.php');
 global $DB, $USER;
 
-// Build Odoo URL from the same host as Moodle (Odoo runs on port 443, no port suffix)
-$_p = parse_url($CFG->wwwroot);
-$ODOO_REQUEST_URL = $_p['scheme'] . '://' . $_p['host'] . '/healthcare/request-access';
-unset($_p);
+// Odoo account request URL (staging)
+$ODOO_REQUEST_URL = 'https://esmos-staging.koreacentral.cloudapp.azure.com/healthcare/request-access';
 
 // Run as admin
 $USER = get_admin();
