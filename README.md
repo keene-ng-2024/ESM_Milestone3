@@ -99,3 +99,86 @@ To wipe all data and start clean:
 ```bash
 docker compose down -v && docker compose up -d --build
 ```
+
+---
+
+## Load Testing & Horizontal Scaling
+
+### Overview
+
+Load testing was conducted using **Locust** to compare system performance before and after horizontal scaling. A dedicated Azure load test VM (`ESMOS-Milestone3-LB-VM`) was used to avoid resource contention with the production services.
+
+**Hard requirement:** 50 concurrent Moodle users with zero failures.
+**Target:** 100 concurrent Odoo users.
+
+### Changes Made for Scaling
+
+**`docker-compose.yml`:**
+| Change | Reason |
+|---|---|
+| Removed `ports: "8069:8069"` from Odoo | Host port binding prevents multiple replicas |
+| Removed `container_name: esmos-moodle` | Fixed container names prevent multiple replicas |
+| Added `deploy.resources` limits (1 CPU, 1GB RAM) | Prevents replicas from starving each other |
+| Increased PostgreSQL `max_connections` to 200 | Prevents connection pool exhaustion with 2 Odoo replicas |
+
+**`nginx/conf.d/esmos.conf`:**
+| Change | Reason |
+|---|---|
+| Added `resolver 127.0.0.11 valid=5s` | Forces Nginx to re-resolve Docker DNS per request |
+| Variable-based `proxy_pass` | Enables round-robin across replicas |
+
+### Running the Load Tests
+
+Install Locust on the load test VM:
+```bash
+bash load-tests/setup-venv.sh
+source load-tests/.venv/bin/activate
+```
+
+**Step 1 — Run baseline (single instance):**
+```bash
+bash load-tests/run_baseline.sh
+```
+
+**Step 2 — Scale up on prod VM:**
+```bash
+docker compose up -d --scale odoo=2 --scale moodle=2 --no-recreate
+docker exec esm_milestone3-nginx-1 nginx -s reload
+```
+
+**Step 3 — Run scaled test:**
+```bash
+bash load-tests/run_scaled.sh
+```
+
+**Step 4 — Compare results:**
+```bash
+bash load-tests/compare.sh
+```
+
+**Step 5 — Scale back down after testing:**
+```bash
+docker compose up -d --scale odoo=1 --scale moodle=1 --no-recreate
+```
+
+### Results
+
+| Metric | Odoo Baseline | Odoo Scaled | Change |
+|---|---|---|---|
+| Avg response time | 438ms | 373ms | -15% |
+| p95 response time | 2600ms | 2200ms | -15% |
+| Requests/sec | 41.1 | 42.5 | +3% |
+| Failures | 220 | 222 | Stable |
+
+| Metric | Moodle Baseline | Moodle Scaled | Change |
+|---|---|---|---|
+| Avg response time | 694ms | 612ms | -12% |
+| p95 response time | 1400ms | 1300ms | -7% |
+| Requests/sec | 18.97 | 19.49 | +3% |
+| Failures | 0 | 0 | Met |
+
+### Analysis
+
+Horizontal scaling resulted in measurable improvements across both services. Odoo showed a 15% reduction in average and p95 response times under 100 concurrent users. Moodle met the hard requirement of 50 concurrent users with zero failures.
+
+The remaining Odoo failures under load are attributed to the single PostgreSQL instance becoming the bottleneck — adding more Odoo replicas distributes application-layer load but all replicas share the same database. The recommended next step would be implementing PostgreSQL read replicas with PgBouncer connection pooling.
