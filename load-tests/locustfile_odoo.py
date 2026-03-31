@@ -28,8 +28,8 @@ class OdooUser(HttpUser):
         self.client.post(
             "/web/login",
             data={
-                "login": "admin",
-                "password": "admin",
+                "login": "sysconfig@esmos.meals.sg",
+                "password": "esm214",
                 "csrf_token": csrf,
             },
             headers={"Content-Type": "application/x-www-form-urlencoded"},

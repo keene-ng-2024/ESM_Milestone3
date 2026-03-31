@@ -8,6 +8,7 @@ import random
 from locust import HttpUser, task, between
 
 STAFF_ACCOUNTS = [
+    ("admin", "moodle2140"),
     ("staff1", "Esmos2024!"),
     ("staff2", "Esmos2024!"),
     ("staff3", "Esmos2024!"),
