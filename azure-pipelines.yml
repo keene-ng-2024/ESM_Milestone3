@@ -74,6 +74,15 @@ stages:
 
           - script: |
               cd $(PROJECT_DIR)
+              MOODLE_CONTAINER=$(docker compose ps -q moodle | head -1)
+              docker exec "$MOODLE_CONTAINER" sed -i "s|\$CFG->wwwroot.*=.*'.*';|\$CFG->wwwroot   = 'https://$(DOMAIN):8443';|" /var/www/html/config.php
+              docker exec "$MOODLE_CONTAINER" grep -q "sslproxy" /var/www/html/config.php || \
+                docker exec "$MOODLE_CONTAINER" sed -i "/wwwroot/a \$CFG->sslproxy  = true;" /var/www/html/config.php
+              docker compose restart moodle
+            displayName: 'Configure Moodle'
+
+          - script: |
+              cd $(PROJECT_DIR)
               STATUS=$(curl -k -o /dev/null -s -w "%{http_code}" https://localhost/)
               if [ "$STATUS" = "200" ] || [ "$STATUS" = "303" ]; then
                 echo "Odoo is responding (HTTP $STATUS)"
@@ -161,6 +170,15 @@ stages:
                 "DELETE FROM ir_attachment WHERE res_model = 'ir.ui.view' AND name LIKE 'web.assets_%';"
               docker compose restart odoo
             displayName: 'Configure Odoo'
+
+          - script: |
+              cd $(PROJECT_DIR)
+              MOODLE_CONTAINER=$(docker compose ps -q moodle | head -1)
+              docker exec "$MOODLE_CONTAINER" sed -i "s|\$CFG->wwwroot.*=.*'.*';|\$CFG->wwwroot   = 'https://$(DOMAIN):8443';|" /var/www/html/config.php
+              docker exec "$MOODLE_CONTAINER" grep -q "sslproxy" /var/www/html/config.php || \
+                docker exec "$MOODLE_CONTAINER" sed -i "/wwwroot/a \$CFG->sslproxy  = true;" /var/www/html/config.php
+              docker compose restart moodle
+            displayName: 'Configure Moodle'
 
           - script: |
               cd $(PROJECT_DIR)
