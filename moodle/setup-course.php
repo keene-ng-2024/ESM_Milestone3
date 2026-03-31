@@ -69,7 +69,8 @@ function add_page($course, $name, $section, $content) {
         [$course->id, $name]
     );
     if ($existing) {
-        echo "   Page '$name' already exists\n";
+        $DB->set_field('page', 'content', $content, ['id' => $existing->instance]);
+        echo "   Page '$name' already exists (content updated)\n";
         return $existing->id;
     }
 
@@ -119,7 +120,8 @@ function add_assignment($course, $name, $section, $intro) {
         [$course->id, $name]
     );
     if ($existing) {
-        echo "   Assignment '$name' already exists\n";
+        $DB->set_field('assign', 'intro', $intro, ['id' => $existing->instance]);
+        echo "   Assignment '$name' already exists (intro updated)\n";
         return $existing->id;
     }
 
@@ -242,11 +244,32 @@ add_page($course, 'Course Summary and Next Steps', 3,
 <ol>
 <li>Complete the Training Acknowledgement below</li>
 <li>Screenshot your completion for your records</li>
-<li>Contact your supervisor if you need additional Odoo access</li>
+<li>Request your Odoo account — the link unlocks after you submit the acknowledgement</li>
 </ol>');
 
-add_assignment($course, 'Training Acknowledgement', 3,
+$ack_cmid = add_assignment($course, 'Training Acknowledgement', 3,
 '<p>Please confirm that you have read and understood all training materials by typing: <em>"I have completed the ESMOS Odoo staff training."</em></p>');
+
+$request_cmid = add_page($course, 'Request Your Odoo Account', 3,
+'<h3>Request Your Odoo Account</h3>
+<p>You have completed the ESMOS Staff Training. Click the button below to submit your account request to the helpdesk team. They will create your Odoo account within one business day.</p>
+<div style="margin-top:20px; padding:16px; background:#f0f4ff; border-left:4px solid #0d6efd; border-radius:4px;">
+<p style="margin:0 0 12px 0;"><strong>Ready to get started?</strong></p>
+<a href="https://esmos-e08g09t05.koreacentral.cloudapp.azure.com/healthcare/request-access"
+   target="_blank"
+   style="display:inline-block; padding:10px 24px; background:#0d6efd; color:#fff; text-decoration:none; border-radius:4px; font-weight:bold;">
+   Request My Odoo Account &rarr;
+</a>
+</div>');
+
+// Lock "Request Your Odoo Account" behind Training Acknowledgement completion
+$availability = json_encode([
+    'op'    => '&',
+    'c'     => [['type' => 'completion', 'cm' => (int)$ack_cmid, 'e' => 1]],
+    'showc' => [true],
+]);
+$DB->set_field('course_modules', 'availability', $availability, ['id' => (int)$request_cmid]);
+echo "   Locked 'Request Your Odoo Account' behind Training Acknowledgement completion\n";
 
 // ─── 4. Set course completion criteria ───────────────────────────
 echo "4. Setting course completion criteria...\n";
