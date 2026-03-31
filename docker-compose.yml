@@ -4,8 +4,6 @@ services:
     image: odoo:17.0
     depends_on:
       - odoo-db
-    ports:
-      - "8069:8069"
     volumes:
       - odoo_data:/var/lib/odoo
       - ./odoo/custom-addons/helpdesk:/mnt/extra-addons
@@ -36,7 +34,6 @@ services:
     build:
       context: ./moodle
       dockerfile: Dockerfile
-    container_name: esmos-moodle
     depends_on:
       moodle-db:
         condition: service_healthy

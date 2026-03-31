@@ -11,6 +11,10 @@ nginx/certs/
 __pycache__/
 *.pyc
 
+# Load test venv and results
+load-tests/.venv/
+load-tests/results/
+
 # OS files
 .DS_Store
 Thumbs.db
