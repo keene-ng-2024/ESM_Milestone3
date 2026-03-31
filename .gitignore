@@ -1,5 +1,5 @@
 # Runtime data volumes (created by Docker)
-data/
+/data/
 
 # SSL certs (generate on the VM, never commit)
 nginx/certs/
