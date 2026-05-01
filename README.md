@@ -1,5 +1,5 @@
 # ESMOS Healthcare Platform
-
+Project to simulate live deployment of a meal kit ordering website on Microsoft Azure. 
 Docker Compose stack for ESMOS — Odoo 17 + Moodle + Nginx on Azure Southeast Asia.
 
 ## Services
